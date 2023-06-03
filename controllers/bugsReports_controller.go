@@ -11,16 +11,31 @@ import (
 func ShowAllBugsReports(c *gin.Context) {
 	database.Connect()
 	db := database.GetDatabase()
-	var p []models.Bugs
-	err := db.Find(&p).Error
 
-	if err != nil {
+	// Create a channel to receive the results
+	ch := make(chan []models.Bugs)
+	go func() {
+		var p []models.Bugs
+		err := db.Find(&p).Error
+		if err != nil {
+			ch <- nil
+			return
+		}
+		ch <- p
+	}()
+
+	// Wait for the results from the channel
+	p := <-ch
+
+	database.CloseConn()
+
+	if p == nil {
 		c.JSON(400, gin.H{
-			"error": "cannot find all bugs report: " + err.Error(),
+			"error": "cannot find all bugs report",
 		})
 		return
 	}
-	database.CloseConn()
+
 	c.JSON(200, p)
 }
 
@@ -31,22 +46,37 @@ func ShowBugsReport(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "ID has to be integer",
+			"error": "ID has to be an integer",
 		})
 		return
 	}
 
 	db := database.GetDatabase()
-	var p models.Bugs
-	err = db.First(&p, newid).Error
 
-	if err != nil {
+	// Create a channel to receive the result
+	ch := make(chan *models.Bugs)
+	go func() {
+		var p models.Bugs
+		err = db.First(&p, newid).Error
+		if err != nil {
+			ch <- nil
+			return
+		}
+		ch <- &p
+	}()
+
+	// Wait for the result from the channel
+	p := <-ch
+
+	database.CloseConn()
+
+	if p == nil {
 		c.JSON(400, gin.H{
-			"error": "cannot find bug report by id: " + err.Error(),
+			"error": "cannot find bug report by ID",
 		})
 		return
 	}
-	database.CloseConn()
+
 	c.JSON(200, p)
 }
 
@@ -64,14 +94,25 @@ func CreateBugsReport(c *gin.Context) {
 		return
 	}
 
-	err = db.Create(&p).Error
+	// Create a channel to receive the result
+	ch := make(chan error)
+	go func() {
+		err = db.Create(&p).Error
+		ch <- err
+	}()
+
+	// Wait for the result from the channel
+	err = <-ch
+
+	database.CloseConn()
+
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "cannot create bug report: " + err.Error(),
 		})
 		return
 	}
-	database.CloseConn()
+
 	c.JSON(200, p)
 }
 
@@ -82,14 +123,24 @@ func DeleteBugsReport(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "ID has to be integer",
+			"error": "ID has to be an integer",
 		})
 		return
 	}
 
 	db := database.GetDatabase()
 
-	err = db.Delete(&models.Bugs{}, newid).Error
+	// Create a channel to receive the result
+	ch := make(chan error)
+	go func() {
+		err = db.Delete(&models.Bugs{}, newid).Error
+		ch <- err
+	}()
+
+	// Wait for the result from the channel
+	err = <-ch
+
+	database.CloseConn()
 
 	if err != nil {
 		c.JSON(400, gin.H{
@@ -97,7 +148,7 @@ func DeleteBugsReport(c *gin.Context) {
 		})
 		return
 	}
-	database.CloseConn()
+
 	c.Status(204)
 }
 
@@ -115,13 +166,24 @@ func EditBugsReport(c *gin.Context) {
 		return
 	}
 
-	err = db.Save(&p).Error
+	// Create a channel to receive the result
+	ch := make(chan error)
+	go func() {
+		err = db.Save(&p).Error
+		ch <- err
+	}()
+
+	// Wait for the result from the channel
+	err = <-ch
+
+	database.CloseConn()
+
 	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "cannot create bug report: " + err.Error(),
+			"error": "cannot update bug report: " + err.Error(),
 		})
 		return
 	}
-	database.CloseConn()
+
 	c.JSON(200, p)
 }
