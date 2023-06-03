@@ -18,14 +18,14 @@ var database *gorm.DB
 func Connect() {
 	connectionURI := os.Getenv("DATABASE_URI")
 	db, err := gorm.Open(postgres.Open(connectionURI), &gorm.Config{})
-	warning.FatalError(err)
+	warning.FATAL_ERROR(err)
 
 	fmt.Println("Database Connected")
 
 	database = db
 
 	config, err := database.DB()
-	warning.FatalError(err)
+	warning.FATAL_ERROR(err)
 
 	config.SetMaxIdleConns(10)
 	config.SetMaxOpenConns(100)
